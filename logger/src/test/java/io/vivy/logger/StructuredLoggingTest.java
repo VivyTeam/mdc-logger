@@ -8,7 +8,7 @@ public class StructuredLoggingTest {
 
     @Test
     public void shouldCallContext() {
-        WithContext.of(log)
+        ContextLogger.of(log)
                 .with(
                         "string", "something",
                         "integer", 12
@@ -18,7 +18,7 @@ public class StructuredLoggingTest {
 
     @Test
     public void shouldWorkWithSimpleContext() {
-        WithContext.of(log)
+        ContextLogger.of(log)
                 .with(
                         "string", "something"
                 )
@@ -27,7 +27,7 @@ public class StructuredLoggingTest {
 
     @Test
     public void shouldLogWarnLevel() {
-        WithContext.of(log)
+        ContextLogger.of(log)
                 .with(
                         "multilined_string", "frodo\ncan\n\rjump\r\nvery far"
                 )
@@ -36,7 +36,7 @@ public class StructuredLoggingTest {
 
     @Test
     public void shouldWorkWithDebugLevel() {
-        WithContext.of(log)
+        ContextLogger.of(log)
                 .with(
                         "string", "something"
                 )
@@ -45,7 +45,7 @@ public class StructuredLoggingTest {
 
     @Test
     public void shouldWorkWithTraceLevel() {
-        WithContext.of(log)
+        ContextLogger.of(log)
                 .with(
                         "string", "something"
                 )

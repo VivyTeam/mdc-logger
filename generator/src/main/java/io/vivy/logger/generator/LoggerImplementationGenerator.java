@@ -29,7 +29,6 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.IntStream;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
@@ -59,7 +58,7 @@ public class LoggerImplementationGenerator extends AbstractProcessor {
             }
 
             if (annotations.isEmpty()) {
-                LOGGER.info("No any annotation found...");
+                LOGGER.fine("Not annotated with " + GenerateContextLogger.class);
                 return false;
             }
 
@@ -68,12 +67,12 @@ public class LoggerImplementationGenerator extends AbstractProcessor {
                 roundEnv.getElementsAnnotatedWith(annotation)
                         .forEach(element -> {
 
-                            ClassName loggerClassName = ClassName.get(processingEnv.getElementUtils().getPackageOf(element).getQualifiedName().toString(), "LoggerWithContext");
+                            ClassName loggerClassName = ClassName.get(processingEnv.getElementUtils().getPackageOf(element).getQualifiedName().toString(), "MDCLogger");
                             Class<org.slf4j.Logger> slf4jLoggerClass = org.slf4j.Logger.class;
 
                             TypeSpec.Builder logger = TypeSpec.classBuilder(loggerClassName)
                                     .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
-                                    .addSuperinterface(ClassName.get(loggerClassName.packageName(), "WithContext"))
+                                    .addSuperinterface(ClassName.get(loggerClassName.packageName(), "ContextLogger"))
                                     .addField(FieldSpec.builder(slf4jLoggerClass, "logger", Modifier.PRIVATE, Modifier.FINAL).build())
                                     .addMethod(
                                             MethodSpec.constructorBuilder()
@@ -83,7 +82,8 @@ public class LoggerImplementationGenerator extends AbstractProcessor {
                                                     .build()
                                     );
 
-                            IntStream.range(1, 6).forEach(i -> {
+                            // all `with` methods
+                            for (int i = 1; i <= 5; i++) {
                                 MethodSpec.Builder with = MethodSpec.methodBuilder("with")
                                         .addModifiers(Modifier.PUBLIC)
                                         .returns(slf4jLoggerClass);
@@ -101,7 +101,7 @@ public class LoggerImplementationGenerator extends AbstractProcessor {
                                                 .addStatement("return this")
                                                 .build()
                                 );
-                            });
+                            }
 
 
                             // delegation

@@ -5,9 +5,9 @@ import io.vivy.logger.generator.annotations.GenerateContextLogger;
 import org.slf4j.Logger;
 
 @GenerateContextLogger
-public interface WithContext extends Logger {
+public interface ContextLogger extends Logger {
 
-    static LoggerWithContext of(Logger logger) {
-        return new LoggerWithContext(logger);
+    static MDCLogger of(Logger logger) {
+        return new MDCLogger(logger);
     }
 }
