@@ -1,0 +1,13 @@
+plugins {
+    id 'java'
+}
+
+sourceCompatibility = 1.8
+
+dependencies {
+    compileOnly project(':generator')
+
+    compile 'org.slf4j:slf4j-api'
+    testCompileOnly 'org.projectlombok:lombok'
+    testCompile 'ch.qos.logback:logback-classic'
+}

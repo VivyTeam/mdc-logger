@@ -1,0 +1,4 @@
+rootProject.name = 'mdc-logger'
+
+include 'generator'
+include 'logger'
