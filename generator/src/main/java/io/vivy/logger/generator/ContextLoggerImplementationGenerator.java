@@ -143,11 +143,11 @@ public class ContextLoggerImplementationGenerator extends AbstractProcessor {
                                         } else {
                                             overriding
                                                     .addStatement("context.forEach((k, v) -> $T.put(k, v))", MDC.class)
-                                                    .addCode("try {")
+                                                    .addCode("try {\n  ")
                                                     .addStatement("logger.$L($L)", it.getSimpleName(), args)
-                                                    .addCode("} finally {")
+                                                    .addCode("} finally {\n  ")
                                                     .addStatement("context.forEach((k, __) -> $T.remove(k))", MDC.class)
-                                                    .addCode("}");
+                                                    .addCode("}\n");
                                         }
 
                                         return overriding.build();
