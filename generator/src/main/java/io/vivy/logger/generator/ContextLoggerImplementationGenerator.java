@@ -1,14 +1,17 @@
 package io.vivy.logger.generator;
 
 import com.google.auto.service.AutoService;
+import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeSpec;
 import io.vivy.logger.generator.annotations.GenerateContextLogger;
 import org.slf4j.MDC;
 
+import javax.annotation.Generated;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
@@ -24,7 +27,9 @@ import javax.lang.model.type.TypeKind;
 import javax.tools.JavaFileObject;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.logging.Level;
@@ -35,9 +40,9 @@ import static java.util.stream.Collectors.joining;
 
 @AutoService(Processor.class)
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
-public class LoggerImplementationGenerator extends AbstractProcessor {
+public class ContextLoggerImplementationGenerator extends AbstractProcessor {
 
-    private static final Logger LOGGER = Logger.getLogger(LoggerImplementationGenerator.class.toString());
+    private static final Logger LOGGER = Logger.getLogger(ContextLoggerImplementationGenerator.class.toString());
 
     @Override
     public Set<String> getSupportedAnnotationTypes() {
@@ -68,37 +73,52 @@ public class LoggerImplementationGenerator extends AbstractProcessor {
                         .forEach(element -> {
 
                             ClassName loggerClassName = ClassName.get(processingEnv.getElementUtils().getPackageOf(element).getQualifiedName().toString(), "MDCLogger");
+                            ClassName contextLogger = ClassName.get(loggerClassName.packageName(), "ContextLogger");
                             Class<org.slf4j.Logger> slf4jLoggerClass = org.slf4j.Logger.class;
 
                             TypeSpec.Builder logger = TypeSpec.classBuilder(loggerClassName)
+                                    .addAnnotation(AnnotationSpec.builder(Generated.class).addMember("value", "$S", this.getClass().getCanonicalName()).build())
                                     .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
-                                    .addSuperinterface(ClassName.get(loggerClassName.packageName(), "ContextLogger"))
+                                    .addSuperinterface(contextLogger)
                                     .addField(FieldSpec.builder(slf4jLoggerClass, "logger", Modifier.PRIVATE, Modifier.FINAL).build())
+                                    .addField(FieldSpec.builder(ParameterizedTypeName.get(Map.class, String.class, String.class), "context", Modifier.PRIVATE, Modifier.FINAL).build())
                                     .addMethod(
                                             MethodSpec.constructorBuilder()
                                                     .addModifiers(Modifier.PUBLIC)
                                                     .addParameter(slf4jLoggerClass, "logger")
-                                                    .addStatement("this.$N = $N", "logger", "logger")
+                                                    .addStatement("this(logger, $T.emptyMap())", Collections.class)
+                                                    .build()
+                                    )
+                                    .addMethod(
+                                            MethodSpec.constructorBuilder()
+                                                    .addModifiers(Modifier.PRIVATE)
+                                                    .addParameter(slf4jLoggerClass, "logger")
+                                                    .addParameter(ParameterizedTypeName.get(Map.class, String.class, String.class), "context")
+                                                    .addStatement("this.logger = logger")
+                                                    .addStatement("this.context = context")
                                                     .build()
                                     );
 
                             // all `with` methods
                             for (int i = 1; i <= 5; i++) {
                                 MethodSpec.Builder with = MethodSpec.methodBuilder("with")
+                                        .addAnnotation(Override.class)
                                         .addModifiers(Modifier.PUBLIC)
-                                        .returns(slf4jLoggerClass);
+                                        .returns(contextLogger)
+                                        .addStatement("$T ctx = new $T<>()", ParameterizedTypeName.get(Map.class, String.class, String.class), HashMap.class)
+                                        .addStatement("ctx.putAll(context)");
 
                                 // key-value pairs
                                 for (int c = 1; c <= i; c++) {
                                     with
                                             .addParameter(String.class, "key" + c)
                                             .addParameter(Object.class, "value" + c)
-                                            .addStatement("$1T.put(key$3L, value$3L instanceof $2T ? ($2T) value$3L : $2T.valueOf(value$3L))", MDC.class, String.class, c);
+                                            .addStatement("ctx.put(key$2L, value$2L instanceof $1T ? ($1T) value$2L : $1T.valueOf(value$2L))", String.class, c);
                                 }
 
                                 logger.addMethod(
                                         with
-                                                .addStatement("return this")
+                                                .addStatement("return new $T(logger, ctx)", loggerClassName)
                                                 .build()
                                 );
                             }
@@ -111,6 +131,7 @@ public class LoggerImplementationGenerator extends AbstractProcessor {
                                     .filter(it -> !it.getModifiers().contains(Modifier.STATIC))
                                     .filter(it -> !it.getModifiers().contains(Modifier.FINAL))
                                     .filter(it -> !it.getModifiers().contains(Modifier.NATIVE))
+                                    .filter(it -> !it.getSimpleName().toString().equals("with"))
                                     .map(it -> (ExecutableElement) it)
                                     .map(it -> {
                                         MethodSpec.Builder overriding = MethodSpec.overriding(it);
@@ -120,10 +141,12 @@ public class LoggerImplementationGenerator extends AbstractProcessor {
                                         if (it.getReturnType().getKind() != TypeKind.VOID) {
                                             overriding.addStatement("return logger.$L($L)", it.getSimpleName(), args);
                                         } else {
-                                            overriding.addCode("try {")
+                                            overriding
+                                                    .addStatement("context.forEach((k, v) -> $T.put(k, v))", MDC.class)
+                                                    .addCode("try {")
                                                     .addStatement("logger.$L($L)", it.getSimpleName(), args)
                                                     .addCode("} finally {")
-                                                    .addStatement("$T.clear()", MDC.class)
+                                                    .addStatement("context.forEach((k, __) -> $T.remove(k))", MDC.class)
                                                     .addCode("}");
                                         }
 
