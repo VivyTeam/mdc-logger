@@ -1,11 +1,11 @@
 package io.vivy.logger;
 
-import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
 import java.util.Map;
@@ -18,8 +18,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 
-@Slf4j
 class StructuredLoggingTest {
+    private static final Logger log = LoggerFactory.getLogger(StructuredLoggingTest.class);
+
     @BeforeEach
     void setUp() {
         MDC.clear();

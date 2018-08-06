@@ -67,108 +67,110 @@ public class ContextLoggerImplementationGenerator extends AbstractProcessor {
                 return false;
             }
 
-
             for (TypeElement annotation : annotations) {
-                roundEnv.getElementsAnnotatedWith(annotation)
-                        .forEach(element -> {
+                roundEnv.getElementsAnnotatedWith(annotation).forEach(element -> {
+                    ClassName loggerClassName = ClassName.get(processingEnv.getElementUtils().getPackageOf(element).getQualifiedName().toString(), "MDCLogger");
+                    ClassName contextLogger = ClassName.get(loggerClassName.packageName(), "ContextLogger");
+                    Class<org.slf4j.Logger> slf4jLoggerClass = org.slf4j.Logger.class;
 
-                            ClassName loggerClassName = ClassName.get(processingEnv.getElementUtils().getPackageOf(element).getQualifiedName().toString(), "MDCLogger");
-                            ClassName contextLogger = ClassName.get(loggerClassName.packageName(), "ContextLogger");
-                            Class<org.slf4j.Logger> slf4jLoggerClass = org.slf4j.Logger.class;
+                    TypeSpec.Builder logger = TypeSpec.classBuilder(loggerClassName)
+                            .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
+                            .addSuperinterface(contextLogger)
+                            .addField(FieldSpec.builder(slf4jLoggerClass, "logger", Modifier.PRIVATE, Modifier.FINAL).build())
+                            .addField(FieldSpec.builder(ParameterizedTypeName.get(Map.class, String.class, String.class), "context", Modifier.PRIVATE, Modifier.FINAL).build())
+                            .addMethod(
+                                    MethodSpec.constructorBuilder()
+                                            .addModifiers(Modifier.PUBLIC)
+                                            .addParameter(slf4jLoggerClass, "logger")
+                                            .addStatement("this(logger, $T.emptyMap())", Collections.class)
+                                            .build()
+                            )
+                            .addMethod(
+                                    MethodSpec.constructorBuilder()
+                                            .addModifiers(Modifier.PRIVATE)
+                                            .addParameter(slf4jLoggerClass, "logger")
+                                            .addParameter(ParameterizedTypeName.get(Map.class, String.class, String.class), "context")
+                                            .addStatement("this.logger = logger")
+                                            .addStatement("this.context = context")
+                                            .build()
+                            );
 
-                            TypeSpec.Builder logger = TypeSpec.classBuilder(loggerClassName)
-                                    .addAnnotation(AnnotationSpec.builder(Generated.class).addMember("value", "$S", this.getClass().getCanonicalName()).build())
-                                    .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
-                                    .addSuperinterface(contextLogger)
-                                    .addField(FieldSpec.builder(slf4jLoggerClass, "logger", Modifier.PRIVATE, Modifier.FINAL).build())
-                                    .addField(FieldSpec.builder(ParameterizedTypeName.get(Map.class, String.class, String.class), "context", Modifier.PRIVATE, Modifier.FINAL).build())
-                                    .addMethod(
-                                            MethodSpec.constructorBuilder()
-                                                    .addModifiers(Modifier.PUBLIC)
-                                                    .addParameter(slf4jLoggerClass, "logger")
-                                                    .addStatement("this(logger, $T.emptyMap())", Collections.class)
-                                                    .build()
-                                    )
-                                    .addMethod(
-                                            MethodSpec.constructorBuilder()
-                                                    .addModifiers(Modifier.PRIVATE)
-                                                    .addParameter(slf4jLoggerClass, "logger")
-                                                    .addParameter(ParameterizedTypeName.get(Map.class, String.class, String.class), "context")
-                                                    .addStatement("this.logger = logger")
-                                                    .addStatement("this.context = context")
-                                                    .build()
-                                    );
+                    // all `with` methods
+                    for (int i = 1; i <= 5; i++) {
+                        MethodSpec.Builder with = MethodSpec.methodBuilder("with")
+                                .addAnnotation(Override.class)
+                                .addModifiers(Modifier.PUBLIC)
+                                .returns(contextLogger)
+                                .addStatement("$T ctx = new $T<>(context)", ParameterizedTypeName.get(Map.class, String.class, String.class), HashMap.class);
 
-                            // all `with` methods
-                            for (int i = 1; i <= 5; i++) {
-                                MethodSpec.Builder with = MethodSpec.methodBuilder("with")
-                                        .addAnnotation(Override.class)
-                                        .addModifiers(Modifier.PUBLIC)
-                                        .returns(contextLogger)
-                                        .addStatement("$T ctx = new $T<>()", ParameterizedTypeName.get(Map.class, String.class, String.class), HashMap.class)
-                                        .addStatement("ctx.putAll(context)");
+                        // key-value pairs
+                        for (int c = 1; c <= i; c++) {
+                            with
+                                    .addParameter(String.class, "key" + c)
+                                    .addParameter(Object.class, "value" + c)
+                                    .addStatement("ctx.put(key$2L, value$2L instanceof $1T ? ($1T) value$2L : $1T.valueOf(value$2L))", String.class, c);
+                        }
 
-                                // key-value pairs
-                                for (int c = 1; c <= i; c++) {
-                                    with
-                                            .addParameter(String.class, "key" + c)
-                                            .addParameter(Object.class, "value" + c)
-                                            .addStatement("ctx.put(key$2L, value$2L instanceof $1T ? ($1T) value$2L : $1T.valueOf(value$2L))", String.class, c);
+                        logger.addMethod(
+                                with
+                                        .addStatement("return new $T(logger, ctx)", loggerClassName)
+                                        .build()
+                        );
+                    }
+
+
+                    // delegation
+                    processingEnv.getElementUtils().getAllMembers((TypeElement) element)
+                            .stream()
+                            .filter(it -> it.getKind() == ElementKind.METHOD)
+                            .filter(it -> !it.getModifiers().contains(Modifier.STATIC))
+                            .filter(it -> !it.getModifiers().contains(Modifier.FINAL))
+                            .filter(it -> !it.getModifiers().contains(Modifier.NATIVE))
+                            .filter(it -> !it.getSimpleName().toString().equals("with"))
+                            .map(it -> (ExecutableElement) it)
+                            .map(it -> {
+                                MethodSpec.Builder overriding = MethodSpec.overriding(it);
+
+                                String args = it.getParameters().stream().map(VariableElement::getSimpleName).collect(joining(", "));
+
+                                if (it.getReturnType().getKind() != TypeKind.VOID) {
+                                    overriding.addStatement("return logger.$L($L)", it.getSimpleName(), args);
+                                } else {
+                                    overriding
+                                            .addCode("for ($T entry : context.entrySet()) {\n  ", ParameterizedTypeName.get(Map.Entry.class, String.class, String.class))
+                                            .addStatement("$T.put(entry.getKey(), entry.getValue())", MDC.class)
+                                            .addCode("}\n")
+
+                                            .addCode("try {\n  ")
+                                            .addStatement("logger.$L($L)", it.getSimpleName(), args)
+                                            .addCode("} finally {\n  ")
+
+                                            .addCode("for ($T key : context.keySet()) {\n    ", String.class)
+                                            .addStatement("$T.remove(key)", MDC.class)
+                                            .addCode("  }\n")
+                                            .addCode("}\n");
                                 }
 
-                                logger.addMethod(
-                                        with
-                                                .addStatement("return new $T(logger, ctx)", loggerClassName)
-                                                .build()
-                                );
-                            }
+                                return overriding.build();
+                            })
+                            .forEach(logger::addMethod);
 
+                    JavaFile build = JavaFile
+                            .builder(
+                                    loggerClassName.packageName(),
+                                    logger.build()
+                            )
+                            .build();
 
-                            // delegation
-                            processingEnv.getElementUtils().getAllMembers((TypeElement) element)
-                                    .stream()
-                                    .filter(it -> it.getKind() == ElementKind.METHOD)
-                                    .filter(it -> !it.getModifiers().contains(Modifier.STATIC))
-                                    .filter(it -> !it.getModifiers().contains(Modifier.FINAL))
-                                    .filter(it -> !it.getModifiers().contains(Modifier.NATIVE))
-                                    .filter(it -> !it.getSimpleName().toString().equals("with"))
-                                    .map(it -> (ExecutableElement) it)
-                                    .map(it -> {
-                                        MethodSpec.Builder overriding = MethodSpec.overriding(it);
-
-                                        String args = it.getParameters().stream().map(VariableElement::getSimpleName).collect(joining(", "));
-
-                                        if (it.getReturnType().getKind() != TypeKind.VOID) {
-                                            overriding.addStatement("return logger.$L($L)", it.getSimpleName(), args);
-                                        } else {
-                                            overriding
-                                                    .addStatement("context.forEach((k, v) -> $T.put(k, v))", MDC.class)
-                                                    .addCode("try {\n  ")
-                                                    .addStatement("logger.$L($L)", it.getSimpleName(), args)
-                                                    .addCode("} finally {\n  ")
-                                                    .addStatement("context.forEach((k, __) -> $T.remove(k))", MDC.class)
-                                                    .addCode("}\n");
-                                        }
-
-                                        return overriding.build();
-                                    })
-                                    .forEach(logger::addMethod);
-
-                            JavaFile build = JavaFile
-                                    .builder(
-                                            loggerClassName.packageName(),
-                                            logger.build()
-                                    )
-                                    .build();
-
-                            write(processingEnv).accept(build);
-                        });
+                    write(processingEnv).accept(build);
+                });
             }
 
             LOGGER.info("All classes were successfully processed!");
 
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, format("Can't generate, because of: %s", e.getMessage()), e);
+            throw new ProcessingException("Can't generate logger implementation", e);
         }
 
         return false;
@@ -190,6 +192,10 @@ public class ContextLoggerImplementationGenerator extends AbstractProcessor {
     }
 
     public static class ProcessingException extends RuntimeException {
+        public ProcessingException(String message, Exception cause) {
+            super(message, cause);
+        }
+
         public ProcessingException(String message, String simpleName, JavaFileObject.Kind kind, Exception cause) {
             super(String.format("%s: %s (%s)", message, simpleName, kind), cause);
         }

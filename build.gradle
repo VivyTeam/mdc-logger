@@ -19,7 +19,7 @@ allprojects {
             dependency 'org.slf4j:slf4j-api:1.7.25'
             dependency 'ch.qos.logback:logback-classic:1.2.3'
             dependency 'com.squareup:javapoet:1.11.1'
-            dependency 'org.projectlombok:lombok:1.16.18'
+            dependency 'org.projectlombok:lombok:1.18.2'
             dependency 'com.google.auto.service:auto-service:1.0-rc4'
             dependency 'org.mockito:mockito-core:2.21.0'
         }
@@ -27,8 +27,9 @@ allprojects {
 }
 
 subprojects {
-    apply plugin:'java'
-    sourceCompatibility = targetCompatibility = 1.8
+    apply plugin: 'java'
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
 
     dependencies {
         testImplementation 'org.junit.jupiter:junit-jupiter-api'
