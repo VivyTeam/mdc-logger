@@ -1,0 +1,9 @@
+plugins {
+    id 'java'
+}
+
+dependencies {
+    compile 'org.slf4j:slf4j-api'
+    compileOnly 'com.google.auto.service:auto-service'
+    compile 'com.squareup:javapoet'
+}
