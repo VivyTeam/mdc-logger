@@ -67,7 +67,7 @@ class StructuredLoggingTest {
         logger.debug();
         logger.info();
         logger.warn();
-
+        logger.warn(new RuntimeException("test exception"));
         logger.error(new RuntimeException("test exception"));
     }
 

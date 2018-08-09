@@ -52,6 +52,10 @@ public interface ContextLogger extends Logger {
         warn("");
     }
 
+    default void warn(Throwable t) {
+        warn("", t);
+    }
+
     default void error(Throwable t) {
         error("", t);
     }
