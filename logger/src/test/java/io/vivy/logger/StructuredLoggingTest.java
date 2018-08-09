@@ -29,6 +29,7 @@ class StructuredLoggingTest {
     @Test
     void shouldWorkWithSimpleContext() {
         ContextLogger.of(log)
+                .event("error_happens")
                 .with(
                         "string", "something"
                 )
@@ -54,7 +55,20 @@ class StructuredLoggingTest {
                         "kukareku", "kuku",
                         "kukarekuruku", "kukuru"
                 )
-                .info("error_logged {}", "argument");
+                .info("{}", "argument");
+    }
+
+    @Test
+    void canUseShortForm() {
+        ContextLogger logger = ContextLogger.of(log)
+                .event("log_event_happens");
+
+        logger.trace();
+        logger.debug();
+        logger.info();
+        logger.warn();
+        logger.warn(new RuntimeException("test exception"));
+        logger.error(new RuntimeException("test exception"));
     }
 
     @Test
