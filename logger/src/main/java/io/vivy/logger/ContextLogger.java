@@ -11,6 +11,10 @@ public interface ContextLogger extends Logger {
         return new MDCLogger(logger);
     }
 
+    default ContextLogger event(String event) {
+        return with("event", event);
+    }
+
     ContextLogger with(String key, Object value);
     ContextLogger with(String k1, Object v1, String k2, Object v2);
     ContextLogger with(
@@ -31,4 +35,24 @@ public interface ContextLogger extends Logger {
             String k4, Object v4,
             String k5, Object v5
     );
+
+    default void trace() {
+        trace("");
+    }
+
+    default void debug() {
+        debug("");
+    }
+
+    default void info() {
+        info("");
+    }
+
+    default void warn() {
+        warn("");
+    }
+
+    default void error(Throwable t) {
+        error("", t);
+    }
 }

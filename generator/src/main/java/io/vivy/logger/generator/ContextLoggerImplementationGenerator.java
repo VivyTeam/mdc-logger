@@ -1,7 +1,6 @@
 package io.vivy.logger.generator;
 
 import com.google.auto.service.AutoService;
-import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
@@ -11,7 +10,6 @@ import com.squareup.javapoet.TypeSpec;
 import io.vivy.logger.generator.annotations.GenerateContextLogger;
 import org.slf4j.MDC;
 
-import javax.annotation.Generated;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
@@ -126,8 +124,8 @@ public class ContextLoggerImplementationGenerator extends AbstractProcessor {
                             .filter(it -> !it.getModifiers().contains(Modifier.STATIC))
                             .filter(it -> !it.getModifiers().contains(Modifier.FINAL))
                             .filter(it -> !it.getModifiers().contains(Modifier.NATIVE))
-                            .filter(it -> !it.getSimpleName().toString().equals("with"))
-                            .map(it -> (ExecutableElement) it)
+                            .filter(it -> !it.getEnclosingElement().equals(element))
+                            .map(ExecutableElement.class::cast)
                             .map(it -> {
                                 MethodSpec.Builder overriding = MethodSpec.overriding(it);
 
