@@ -34,6 +34,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static java.lang.String.format;
+import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.joining;
 
 @AutoService(Processor.class)
@@ -134,6 +135,11 @@ public class ContextLoggerImplementationGenerator extends AbstractProcessor {
                                 if (it.getReturnType().getKind() != TypeKind.VOID) {
                                     overriding.addStatement("return logger.$L($L)", it.getSimpleName(), args);
                                 } else {
+                                    if (asList("trace", "debug", "info", "warn", "error").contains(it.getSimpleName().toString())) {
+                                        overriding.addCode("if (!is$LEnabled()) { return; }\n", capitalizeName(it));
+                                    }
+
+
                                     overriding
                                             .addCode("for ($T entry : context.entrySet()) {\n  ", ParameterizedTypeName.get(Map.Entry.class, String.class, String.class))
                                             .addStatement("$T.put(entry.getKey(), entry.getValue())", MDC.class)
@@ -172,6 +178,10 @@ public class ContextLoggerImplementationGenerator extends AbstractProcessor {
         }
 
         return false;
+    }
+
+    private static String capitalizeName(ExecutableElement it) {
+        return String.valueOf(it.getSimpleName().charAt(0)).toUpperCase() + it.getSimpleName().toString().substring(1);
     }
 
 
