@@ -17,6 +17,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class StructuredLoggingTest {
     private static final Logger log = LoggerFactory.getLogger(StructuredLoggingTest.class);
@@ -102,6 +105,8 @@ class StructuredLoggingTest {
     @Test
     void shouldCallContext() {
         val mock = Mockito.mock(Logger.class);
+        when(mock.isErrorEnabled()).thenReturn(true);
+
         val logger = ContextLogger.of(mock)
                 .with(
                         "string", "something",
@@ -127,8 +132,24 @@ class StructuredLoggingTest {
     }
 
     @Test
+    void shouldNotCallContextIfLevelDisabled() {
+        val mock = Mockito.mock(Logger.class);
+        when(mock.isInfoEnabled()).thenReturn(false);
+
+        ContextLogger.of(mock)
+                .with(
+                        "string", "something",
+                        "integer", 12
+                )
+                .info();
+
+        verify(mock, never()).info(anyString());
+    }
+
+    @Test
     void shouldSaveAndEnrichContext() {
         val mock = Mockito.mock(Logger.class);
+        when(mock.isInfoEnabled()).thenReturn(true);
 
         val logger = ContextLogger.of(mock).with("gandalf", "gray");
         val logger2 = logger.with("frodo", "baggins");
@@ -159,6 +180,8 @@ class StructuredLoggingTest {
     @Test
     void shouldUseThreadLocalForMDCButInstanceBound() throws InterruptedException {
         val mock = Mockito.mock(Logger.class);
+        when(mock.isInfoEnabled()).thenReturn(true);
+
         ContextLogger.of(mock).with("saruman", "rainbow");
         val logger = ContextLogger.of(mock).with("gandalf", "gray");
 
@@ -191,6 +214,8 @@ class StructuredLoggingTest {
     @Test
     void shouldNotOverrideGlobalMDCInOtherThread() throws InterruptedException {
         val mock = Mockito.mock(Logger.class);
+        when(mock.isInfoEnabled()).thenReturn(true);
+
         MDC.put("saruman", "rainbow");
         MDC.put("gandalf", "gray");
         MDC.put("frodo", "bugins");
@@ -220,6 +245,8 @@ class StructuredLoggingTest {
 
         latch.await(1, TimeUnit.SECONDS);
 
+        verify(mock).info(anyString());
+
         assertThat(map.get())
                 .hasSize(2)
                 .containsEntry("frodo", "baggins")
@@ -234,6 +261,8 @@ class StructuredLoggingTest {
     @Test
     void shouldOverrideGlobalMDC() throws InterruptedException {
         val mock = Mockito.mock(Logger.class);
+        when(mock.isInfoEnabled()).thenReturn(true);
+
         MDC.put("saruman", "rainbow");
         MDC.put("gandalf", "gray");
         MDC.put("frodo", "bugins");
