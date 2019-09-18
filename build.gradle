@@ -19,7 +19,7 @@ allprojects {
             dependency 'org.slf4j:slf4j-api:1.7.28'
             dependency 'ch.qos.logback:logback-classic:1.2.3'
             dependency 'com.squareup:javapoet:1.11.1'
-            dependency 'org.projectlombok:lombok:1.18.8'
+            dependency 'org.projectlombok:lombok:1.18.10'
             dependency 'com.google.auto.service:auto-service:1.0-rc6'
             dependency 'org.mockito:mockito-core:3.0.0'
         }
