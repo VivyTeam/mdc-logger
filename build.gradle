@@ -21,7 +21,7 @@ allprojects {
             dependency 'com.squareup:javapoet:1.12.1'
             dependency 'org.projectlombok:lombok:1.18.12'
             dependency 'com.google.auto.service:auto-service:1.0-rc6'
-            dependency 'org.mockito:mockito-core:3.2.4'
+            dependency 'org.mockito:mockito-core:3.3.1'
         }
     }
 }
