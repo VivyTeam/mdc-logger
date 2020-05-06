@@ -15,7 +15,7 @@ allprojects {
         }
 
         dependencies {
-            dependency 'org.assertj:assertj-core:3.15.0'
+            dependency 'org.assertj:assertj-core:3.16.0'
             dependency 'org.slf4j:slf4j-api:1.7.30'
             dependency 'ch.qos.logback:logback-classic:1.2.3'
             dependency 'com.squareup:javapoet:1.12.1'
