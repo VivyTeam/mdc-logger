@@ -17,7 +17,7 @@ allprojects {
         dependencies {
             dependency 'org.assertj:assertj-core:3.18.1'
             dependency 'org.slf4j:slf4j-api:1.7.30'
-            dependency 'ch.qos.logback:logback-classic:1.2.4-groovyless'
+            dependency 'ch.qos.logback:logback-classic:1.2.5'
             dependency 'com.squareup:javapoet:1.13.0'
             dependency 'org.projectlombok:lombok:1.18.18'
             dependency 'com.google.auto.service:auto-service:1.0-rc7'
